@@ -208,9 +208,9 @@
         total += price * qty;
       });
 
-      const vouchersNeeded = Math.ceil(total / VOUCHER_VALUE);
-      const vouchers = Math.min(vouchersNeeded, MAX_VOUCHERS);
-      const voucherCover = Math.min(vouchers * VOUCHER_VALUE, total);
+      const vouchersAvailable = Math.floor(total / VOUCHER_VALUE);
+      const vouchers = Math.min(vouchersAvailable, MAX_VOUCHERS);
+      const voucherCover = vouchers * VOUCHER_VALUE;
       const cash = Math.max(0, total - voucherCover);
 
       elTotal.textContent  = fmt(total);
