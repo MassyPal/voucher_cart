@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lista della Spesa</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f4f8;
+      color: #1a202c;
+      min-height: 100dvh;
+      padding: 1rem;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 1.5rem;
+      margin-bottom: 1.25rem;
+      color: #2d3748;
+    }
+
+    /* ── Add-item row ── */
+    #add-row {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    #new-item {
+      flex: 1;
+      padding: 0.6rem 0.8rem;
+      border: 1.5px solid #cbd5e0;
+      border-radius: 0.5rem;
+      font-size: 1rem;
+      background: #fff;
+    }
+
+    #new-item:focus { outline: none; border-color: #4299e1; }
+
+    #btn-add {
+      width: 2.6rem;
+      height: 2.6rem;
+      border: none;
+      border-radius: 0.5rem;
+      background: #4299e1;
+      color: #fff;
+      font-size: 1.4rem;
+      cursor: pointer;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #btn-add:active { background: #2b6cb0; }
+
+    /* ── List ── */
+    #item-list { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+
+    .item-card {
+      background: #fff;
+      border-radius: 0.6rem;
+      padding: 0.6rem 0.75rem;
+      display: grid;
+      grid-template-columns: 1fr auto auto auto;
+      align-items: center;
+      gap: 0.4rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    }
+
+    .item-name {
+      font-size: 0.95rem;
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .item-price, .item-qty {
+      width: 4.5rem;
+      padding: 0.35rem 0.4rem;
+      border: 1.5px solid #cbd5e0;
+      border-radius: 0.4rem;
+      font-size: 0.9rem;
+      text-align: center;
+      background: #f7fafc;
+    }
+
+    .item-price:focus, .item-qty:focus { outline: none; border-color: #4299e1; background: #fff; }
+
+    .btn-delete {
+      width: 2rem;
+      height: 2rem;
+      border: none;
+      border-radius: 0.4rem;
+      background: #fed7d7;
+      color: #c53030;
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .btn-delete:active { background: #feb2b2; }
+
+    /* ── Totals panel ── */
+    #totals {
+      margin-top: 1.25rem;
+      background: #fff;
+      border-radius: 0.7rem;
+      padding: 1rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    }
+
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.25rem 0;
+      font-size: 0.95rem;
+    }
+
+    .total-row + .total-row { border-top: 1px solid #e2e8f0; margin-top: 0.25rem; padding-top: 0.5rem; }
+
+    .total-row.highlight { font-weight: 700; font-size: 1.05rem; }
+
+    .total-row .label { color: #4a5568; }
+    .total-row .value { font-weight: 600; }
+
+    .voucher-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      background: #ebf8ff;
+      color: #2b6cb0;
+      border-radius: 999px;
+      padding: 0.15rem 0.6rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    #empty-msg {
+      text-align: center;
+      color: #a0aec0;
+      margin-top: 2rem;
+      font-size: 0.95rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>🛒 Lista della Spesa</h1>
+
+  <div id="add-row">
+    <input id="new-item" type="text" placeholder="Aggiungi articolo…" autocomplete="off" />
+    <button id="btn-add" aria-label="Aggiungi">+</button>
+  </div>
+
+  <ul id="item-list"></ul>
+  <p id="empty-msg">Nessun articolo nella lista.</p>
+
+  <div id="totals">
+    <div class="total-row highlight">
+      <span class="label">Totale</span>
+      <span class="value" id="total-amount">€ 0,00</span>
+    </div>
+    <div class="total-row">
+      <span class="label">Buoni pasto utilizzabili</span>
+      <span class="value"><span class="voucher-badge" id="voucher-count">🎟 0</span></span>
+    </div>
+    <div class="total-row">
+      <span class="label">Valore buoni pasto</span>
+      <span class="value" id="voucher-value">€ 0,00</span>
+    </div>
+    <div class="total-row highlight">
+      <span class="label">Resto da pagare in contanti</span>
+      <span class="value" id="cash-remainder">€ 0,00</span>
+    </div>
+  </div>
+
+  <script>
+    const VOUCHER_VALUE = 8;    // € per buono pasto
+    const MAX_VOUCHERS  = 8;    // massimo per lista
+
+    const list        = document.getElementById('item-list');
+    const emptyMsg    = document.getElementById('empty-msg');
+    const newItemInput = document.getElementById('new-item');
+    const btnAdd      = document.getElementById('btn-add');
+
+    const elTotal     = document.getElementById('total-amount');
+    const elVCount    = document.getElementById('voucher-count');
+    const elVValue    = document.getElementById('voucher-value');
+    const elCash      = document.getElementById('cash-remainder');
+
+    function fmt(n) {
+      return '€ ' + n.toFixed(2).replace('.', ',');
+    }
+
+    function updateTotals() {
+      let total = 0;
+      list.querySelectorAll('.item-card').forEach(card => {
+        const price = parseFloat(card.querySelector('.item-price').value) || 0;
+        const qty   = parseInt(card.querySelector('.item-qty').value, 10) || 0;
+        total += price * qty;
+      });
+
+      const vouchersNeeded = Math.ceil(total / VOUCHER_VALUE);
+      const vouchers = Math.min(vouchersNeeded, MAX_VOUCHERS);
+      const voucherCover = Math.min(vouchers * VOUCHER_VALUE, total);
+      const cash = Math.max(0, total - voucherCover);
+
+      elTotal.textContent  = fmt(total);
+      elVCount.textContent = '🎟 ' + vouchers;
+      elVValue.textContent = fmt(voucherCover);
+      elCash.textContent   = fmt(cash);
+
+      emptyMsg.style.display = list.children.length ? 'none' : 'block';
+    }
+
+    function createItem(name) {
+      const li = document.createElement('li');
+      li.className = 'item-card';
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'item-name';
+      nameSpan.textContent = name;
+      nameSpan.title = name;
+
+      const priceInput = document.createElement('input');
+      priceInput.type = 'number';
+      priceInput.min  = '0';
+      priceInput.step = '0.01';
+      priceInput.value = '0.00';
+      priceInput.className = 'item-price';
+      priceInput.setAttribute('aria-label', 'Prezzo');
+      priceInput.addEventListener('input', updateTotals);
+
+      const qtyInput = document.createElement('input');
+      qtyInput.type  = 'number';
+      qtyInput.min   = '1';
+      qtyInput.step  = '1';
+      qtyInput.value = '1';
+      qtyInput.className = 'item-qty';
+      qtyInput.setAttribute('aria-label', 'Quantità');
+      qtyInput.addEventListener('input', updateTotals);
+
+      const delBtn = document.createElement('button');
+      delBtn.className = 'btn-delete';
+      delBtn.textContent = '✕';
+      delBtn.setAttribute('aria-label', 'Rimuovi ' + name);
+      delBtn.addEventListener('click', () => { li.remove(); updateTotals(); });
+
+      li.append(nameSpan, priceInput, qtyInput, delBtn);
+      return li;
+    }
+
+    function addItem() {
+      const name = newItemInput.value.trim();
+      if (!name) return;
+      list.appendChild(createItem(name));
+      newItemInput.value = '';
+      newItemInput.focus();
+      updateTotals();
+    }
+
+    btnAdd.addEventListener('click', addItem);
+    newItemInput.addEventListener('keydown', e => { if (e.key === 'Enter') addItem(); });
+
+    updateTotals();
+  </script>
+</body>
+</html>
