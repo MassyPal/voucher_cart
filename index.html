@@ -79,7 +79,7 @@
       white-space: nowrap;
     }
 
-    .item-price, .item-qty {
+    .item-price {
       width: 4.5rem;
       padding: 0.35rem 0.4rem;
       border: 1.5px solid #cbd5e0;
@@ -89,7 +89,39 @@
       background: #f7fafc;
     }
 
-    .item-price:focus, .item-qty:focus { outline: none; border-color: #4299e1; background: #fff; }
+    .item-price:focus { outline: none; border-color: #4299e1; background: #fff; }
+
+    .item-qty {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .btn-qty {
+      width: 1.8rem;
+      height: 1.8rem;
+      border: none;
+      border-radius: 0.4rem;
+      background: #ebf8ff;
+      color: #2b6cb0;
+      font-size: 1.1rem;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .btn-qty:active { background: #bee3f8; }
+    .btn-qty:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .qty-value {
+      min-width: 1.5rem;
+      text-align: center;
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
 
     .btn-delete {
       width: 2rem;
@@ -209,7 +241,7 @@
       let total = 0;
       list.querySelectorAll('.item-card').forEach(card => {
         const price = parseFloat(card.querySelector('.item-price').value.replace(',', '.')) || 0;
-        const qty   = parseInt(card.querySelector('.item-qty').value.replace(',', '.'), 10) || 0;
+        const qty   = parseInt(card.querySelector('.qty-value').textContent, 10) || 0;
         total += price * qty;
       });
 
@@ -245,15 +277,40 @@
       priceInput.addEventListener('input', updateTotals);
       priceInput.addEventListener('focus', () => clearIfZero(priceInput));
 
-      const qtyInput = document.createElement('input');
-      qtyInput.type  = 'text';
-      qtyInput.inputMode = 'numeric';
-      qtyInput.pattern = '[0-9]*';
-      qtyInput.value = '1';
-      qtyInput.className = 'item-qty';
-      qtyInput.setAttribute('aria-label', 'Quantità');
-      qtyInput.addEventListener('input', updateTotals);
-      qtyInput.addEventListener('focus', () => clearIfZero(qtyInput));
+      const qtyWrap = document.createElement('div');
+      qtyWrap.className = 'item-qty';
+
+      const btnMinus = document.createElement('button');
+      btnMinus.type = 'button';
+      btnMinus.className = 'btn-qty';
+      btnMinus.textContent = '−';
+      btnMinus.setAttribute('aria-label', 'Diminuisci quantità di ' + name);
+
+      const qtyValue = document.createElement('span');
+      qtyValue.className = 'qty-value';
+      qtyValue.textContent = '0';
+      qtyValue.setAttribute('aria-live', 'polite');
+      qtyValue.setAttribute('aria-label', 'Quantità: 0');
+
+      const btnPlus = document.createElement('button');
+      btnPlus.type = 'button';
+      btnPlus.className = 'btn-qty';
+      btnPlus.textContent = '+';
+      btnPlus.setAttribute('aria-label', 'Aumenta quantità di ' + name);
+
+      function setQty(n) {
+        const value = Math.max(0, n);
+        qtyValue.textContent = String(value);
+        qtyValue.setAttribute('aria-label', 'Quantità: ' + value);
+        btnMinus.disabled = value === 0;
+        updateTotals();
+      }
+
+      btnMinus.addEventListener('click', () => setQty(parseInt(qtyValue.textContent, 10) - 1));
+      btnPlus.addEventListener('click', () => setQty(parseInt(qtyValue.textContent, 10) + 1));
+
+      qtyWrap.append(btnMinus, qtyValue, btnPlus);
+      setQty(0);
 
       const delBtn = document.createElement('button');
       delBtn.className = 'btn-delete';
@@ -261,7 +318,7 @@
       delBtn.setAttribute('aria-label', 'Rimuovi ' + name);
       delBtn.addEventListener('click', () => { li.remove(); updateTotals(); });
 
-      li.append(nameSpan, priceInput, qtyInput, delBtn);
+      li.append(nameSpan, priceInput, qtyWrap, delBtn);
       return li;
     }
 
