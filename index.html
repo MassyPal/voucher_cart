@@ -200,10 +200,15 @@
       return '€ ' + n.toFixed(2).replace('.', ',');
     }
 
+    function clearIfZero(input) {
+      const value = parseFloat(input.value.replace(',', '.'));
+      if (!value) input.value = '';
+    }
+
     function updateTotals() {
       let total = 0;
       list.querySelectorAll('.item-card').forEach(card => {
-        const price = parseFloat(card.querySelector('.item-price').value) || 0;
+        const price = parseFloat(card.querySelector('.item-price').value.replace(',', '.')) || 0;
         const qty   = parseInt(card.querySelector('.item-qty').value, 10) || 0;
         total += price * qty;
       });
@@ -231,22 +236,24 @@
       nameSpan.title = name;
 
       const priceInput = document.createElement('input');
-      priceInput.type = 'number';
-      priceInput.min  = '0';
-      priceInput.step = '0.01';
+      priceInput.type = 'text';
+      priceInput.inputMode = 'decimal';
+      priceInput.pattern = '[0-9]*[.,]?[0-9]*';
       priceInput.value = '0.00';
       priceInput.className = 'item-price';
       priceInput.setAttribute('aria-label', 'Prezzo');
       priceInput.addEventListener('input', updateTotals);
+      priceInput.addEventListener('focus', () => clearIfZero(priceInput));
 
       const qtyInput = document.createElement('input');
-      qtyInput.type  = 'number';
-      qtyInput.min   = '1';
-      qtyInput.step  = '1';
+      qtyInput.type  = 'text';
+      qtyInput.inputMode = 'numeric';
+      qtyInput.pattern = '[0-9]*';
       qtyInput.value = '1';
       qtyInput.className = 'item-qty';
       qtyInput.setAttribute('aria-label', 'Quantità');
       qtyInput.addEventListener('input', updateTotals);
+      qtyInput.addEventListener('focus', () => clearIfZero(qtyInput));
 
       const delBtn = document.createElement('button');
       delBtn.className = 'btn-delete';
