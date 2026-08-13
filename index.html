@@ -182,6 +182,22 @@
       margin-top: 2rem;
       font-size: 0.95rem;
     }
+
+    #btn-clear {
+      display: block;
+      width: 100%;
+      margin-top: 1rem;
+      padding: 0.6rem 0.8rem;
+      border: 1.5px solid #fc8181;
+      border-radius: 0.5rem;
+      background: #fff5f5;
+      color: #c53030;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    #btn-clear:active { background: #fed7d7; }
   </style>
 </head>
 <body>
@@ -194,6 +210,8 @@
 
   <ul id="item-list"></ul>
   <p id="empty-msg">Nessun articolo nella lista.</p>
+
+  <button id="btn-clear" type="button">🗑 Svuota lista</button>
 
   <div id="totals">
     <div class="total-row highlight">
@@ -217,11 +235,13 @@
   <script>
     const VOUCHER_VALUE = 8;    // € per buono pasto
     const MAX_VOUCHERS  = 8;    // massimo per lista
+    const STORAGE_KEY   = 'voucher-cart-items';
 
     const list        = document.getElementById('item-list');
     const emptyMsg    = document.getElementById('empty-msg');
     const newItemInput = document.getElementById('new-item');
     const btnAdd      = document.getElementById('btn-add');
+    const btnClear    = document.getElementById('btn-clear');
 
     const elTotal     = document.getElementById('total-amount');
     const elVCount    = document.getElementById('voucher-count');
@@ -256,9 +276,35 @@
       elCash.textContent   = fmt(cash);
 
       emptyMsg.style.display = list.children.length ? 'none' : 'block';
+      saveItems();
     }
 
-    function createItem(name) {
+    function saveItems() {
+      const items = [];
+      list.querySelectorAll('.item-card').forEach(card => {
+        items.push({
+          name:  card.querySelector('.item-name').textContent,
+          price: card.querySelector('.item-price').value,
+          qty:   parseInt(card.querySelector('.qty-value').textContent, 10) || 0
+        });
+      });
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+      } catch (e) { /* localStorage non disponibile: ignora */ }
+    }
+
+    function loadItems() {
+      let items = [];
+      try {
+        items = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+      } catch (e) { items = []; }
+      items.forEach(item => {
+        const li = createItem(item.name, item.price, item.qty);
+        list.appendChild(li);
+      });
+    }
+
+    function createItem(name, initialPrice, initialQty) {
       const li = document.createElement('li');
       li.className = 'item-card';
 
@@ -271,7 +317,7 @@
       priceInput.type = 'text';
       priceInput.inputMode = 'decimal';
       priceInput.pattern = '[0-9]*[.,]?[0-9]*';
-      priceInput.value = '0.00';
+      priceInput.value = initialPrice != null ? initialPrice : '0.00';
       priceInput.className = 'item-price';
       priceInput.setAttribute('aria-label', 'Prezzo');
       priceInput.addEventListener('input', updateTotals);
@@ -310,7 +356,7 @@
       btnPlus.addEventListener('click', () => setQty(parseInt(qtyValue.textContent, 10) + 1));
 
       qtyWrap.append(btnMinus, qtyValue, btnPlus);
-      setQty(0);
+      setQty(Math.max(0, parseInt(initialQty, 10) || 0));
 
       const delBtn = document.createElement('button');
       delBtn.className = 'btn-delete';
@@ -331,9 +377,18 @@
       updateTotals();
     }
 
+    function clearList() {
+      if (!list.children.length) return;
+      if (!confirm('Svuotare tutta la lista?')) return;
+      list.innerHTML = '';
+      updateTotals();
+    }
+
     btnAdd.addEventListener('click', addItem);
     newItemInput.addEventListener('keydown', e => { if (e.key === 'Enter') addItem(); });
+    btnClear.addEventListener('click', clearList);
 
+    loadItems();
     updateTotals();
   </script>
 </body>
